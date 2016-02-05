@@ -6,12 +6,13 @@
 .type  sdram_block_write_xs2, @function
 sdram_block_write_xs2:
 
-#define WRITE_STACK_WORDS 3
-	ENTSP_lu6 WRITE_STACK_WORDS
+#define WRITE_STACK_WORDS_XS2 4
+	ENTSP_lu6 WRITE_STACK_WORDS_XS2
 
 #define buffer_pointer		r0
-#define word_count			r3
-#define new_word_cnt		r6
+#define num_words			r3
+#define new_buff_ptr		r6
+#define new_num_words		r7
 	//r1 sdram_ports struct
 	//r2 t0	- start time
 	//r3 word_count
@@ -28,36 +29,39 @@ sdram_block_write_xs2:
 	stw r4, sp[0]
 	stw r6, sp[1]
 	stw r5, sp[2]
+	stw r7, sp[3]
 
 	//save the cp
 	ldaw r11, cp[0]
 	mov w_cp_save, r11
 
-	//adjust the buffer pointer
-	ldw w_temp, 	sp[1+WRITE_STACK_WORDS]	//row_words
-	sub w_temp, w_temp, r3 //word_count
-	ldaw w_temp, r0[-w_temp]
-	set cp, w_temp
+	//calc the new buffer pointer
+  	ldc w_temp, 0
+  	//ldw w_temp, 	sp[1+WRITE_STACK_WORDS_XS2]	//row_words
+  	sub new_num_words, w_temp, num_words // num_words = -num_words
+  	ldaw new_buff_ptr, r0[-new_num_words]
 
 	add w_term_time, r2, 2
 	add w_term_time, w_term_time, r3
 	add w_term_time, w_term_time, r3
 
-	ldw w_temp, 	sp[1+WRITE_STACK_WORDS]	//row_words
+	ldw w_temp, 	sp[1+WRITE_STACK_WORDS_XS2]	//row_words
 	sub w_temp, w_temp, r3
 	add w_temp, w_temp, w_temp
 
 	ldw w_ras, 		r1[2]	//ras - TRASHES r0, buffer_pointer
 	ldw w_we, 		r1[3]	//we - TRASHES r3, word count
-	ldw w_dq_ah, 	r1[0]	//dq_ah - TRASHEs r1, port struct
+	ldw w_dq_ah, 	r1[0]	//dq_ah - TRASHES r1, port struct
 
-.align 4
 	ldc w_two, 2
-	bru w_temp
 
-	//(blocking)
-	#include "sdram_block_write_body.inc"
+wr_loop:
+    ldw w_temp, new_buff_ptr[new_num_words]
+    add new_num_words, new_num_words, 1
+    out res[w_dq_ah], w_temp
+    bt new_num_words, wr_loop
 
+wr_loop_done:
 	setpt res[w_we], w_term_time
 	outpw res[w_we], w_two, 2
 
@@ -75,10 +79,12 @@ sdram_block_write_xs2:
 	ldw r5, sp[2]
 	ldw r6, sp[1]
 	ldw r4, sp[0]
+	ldw r7, sp[3]
 
-	retsp WRITE_STACK_WORDS
+
+	retsp WRITE_STACK_WORDS_XS2
 .globl sdram_block_write_xs2.nstackwords
-.linkset sdram_block_write_xs2.nstackwords, WRITE_STACK_WORDS
+.linkset sdram_block_write_xs2.nstackwords, WRITE_STACK_WORDS_XS2
 .globl sdram_block_write_xs2.maxtimers
 .linkset sdram_block_write_xs2.maxtimers, 0
 .globl sdram_block_write_xs2.maxchanends
@@ -86,6 +92,7 @@ sdram_block_write_xs2:
 .globl sdram_block_write_xs2.maxthreads
 .linkset sdram_block_write_xs2.maxthreads, 1
 .cc_bottom sdram_block_write_xs2.function
+
 
 .text
 .cc_top sdram_block_write.function
@@ -159,6 +166,7 @@ sdram_block_write:
 
 	ldw r5, sp[2]
 	ldw r4, sp[0]
+
 
 	retsp WRITE_STACK_WORDS
 .globl sdram_block_write.nstackwords
