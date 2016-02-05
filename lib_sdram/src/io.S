@@ -9,9 +9,9 @@ sdram_block_write_xs2:
 #define WRITE_STACK_WORDS 3
 	ENTSP_lu6 WRITE_STACK_WORDS
 
-#define buffer pointer		r0
+#define buffer_pointer		r0
 #define word_count			r3
-#define loop_count			r6
+#define new_word_cnt		r6
 	//r1 sdram_ports struct
 	//r2 t0	- start time
 	//r3 word_count
@@ -47,8 +47,8 @@ sdram_block_write_xs2:
 	sub w_temp, w_temp, r3
 	add w_temp, w_temp, w_temp
 
-	ldw w_ras, 		r1[2]	//ras
-	ldw w_we, 		r1[3]	//we
+	ldw w_ras, 		r1[2]	//ras - TRASHES r0, buffer_pointer
+	ldw w_we, 		r1[3]	//we - TRASHES r3, word count
 	ldw w_dq_ah, 	r1[0]	//dq_ah
 
 .align 4
