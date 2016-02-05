@@ -49,7 +49,7 @@ sdram_block_write_xs2:
 
 	ldw w_ras, 		r1[2]	//ras - TRASHES r0, buffer_pointer
 	ldw w_we, 		r1[3]	//we - TRASHES r3, word count
-	ldw w_dq_ah, 	r1[0]	//dq_ah
+	ldw w_dq_ah, 	r1[0]	//dq_ah - TRASHEs r1, port struct
 
 .align 4
 	ldc w_two, 2
