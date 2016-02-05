@@ -5,7 +5,7 @@
 .type  sdram_block_write_xs2, @function
 sdram_block_write_xs2:
 
-#define WRITE_STACK_WORDS_XS2 3
+#define WRITE_STACK_WORDS_XS2 4
 	ENTSP_lu6 WRITE_STACK_WORDS_XS2
 
 #define buffer_pointer		r0
@@ -26,8 +26,8 @@ sdram_block_write_xs2:
 
 
 	stw r6, sp[0]
-	stw r5, sp[1]
-	stw r7, sp[2]
+	stw r5, sp[2]
+	stw r7, sp[3]
 
 	//calc the new buffer pointer
   	ldc w_temp, 0
@@ -66,8 +66,8 @@ wr_loop_done:
 
 
 	ldw r6, sp[0]
-	ldw r5, sp[1]
-	ldw r7, sp[2]
+	ldw r5, sp[2]
+	ldw r7, sp[3]
 
 
 	retsp WRITE_STACK_WORDS_XS2
