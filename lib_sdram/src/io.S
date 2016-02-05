@@ -1,5 +1,4 @@
 // Copyright (c) 2016, XMOS Ltd, All rights reserved
-.text
 .cc_top sdram_block_write_xs2.function
 .align 4
 .globl sdram_block_write_xs2
@@ -26,14 +25,11 @@ sdram_block_write_xs2:
 #define w_two				r5
 #define w_temp 				r11
 
+.align 4
 	stw r4, sp[0]
 	stw r6, sp[1]
 	stw r5, sp[2]
 	stw r7, sp[3]
-
-	//save the cp
-	ldaw r11, cp[0]
-	mov w_cp_save, r11
 
 	//calc the new buffer pointer
   	ldc w_temp, 0
@@ -44,10 +40,6 @@ sdram_block_write_xs2:
 	add w_term_time, r2, 2
 	add w_term_time, w_term_time, r3
 	add w_term_time, w_term_time, r3
-
-	ldw w_temp, 	sp[1+WRITE_STACK_WORDS_XS2]	//row_words
-	sub w_temp, w_temp, r3
-	add w_temp, w_temp, w_temp
 
 	ldw w_ras, 		r1[2]	//ras - TRASHES r0, buffer_pointer
 	ldw w_we, 		r1[3]	//we - TRASHES r3, word count
@@ -74,11 +66,9 @@ wr_loop_done:
 	setpt res[w_ras], w_term_time
 	outpw res[w_ras], w_two, 2
 
-	set cp, w_cp_save
-
-	ldw r5, sp[2]
-	ldw r6, sp[1]
 	ldw r4, sp[0]
+	ldw r6, sp[1]
+	ldw r5, sp[2]
 	ldw r7, sp[3]
 
 
@@ -94,7 +84,6 @@ wr_loop_done:
 .cc_bottom sdram_block_write_xs2.function
 
 
-.text
 .cc_top sdram_block_write.function
 .align 4
 .globl sdram_block_write
