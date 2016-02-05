@@ -1,5 +1,89 @@
 // Copyright (c) 2016, XMOS Ltd, All rights reserved
 .text
+.cc_top sdram_block_write_xs2.function
+.align 4
+.globl sdram_block_write_xs2
+.type  sdram_block_write_xs2, @function
+sdram_block_write_xs2:
+
+#define WRITE_STACK_WORDS 3
+	ENTSP_lu6 WRITE_STACK_WORDS
+
+ 	//r0 buffer pointer
+	//r1 sdram_ports struct
+	//r2 t0	- start time
+	//r3 word_count
+	//sp[1] row_words
+
+#define w_ras	 			r0
+#define w_dq_ah	 			r1
+#define w_term_time 		r2
+#define w_we 				r3
+#define w_cp_save			r4
+#define w_two				r5
+#define w_temp 				r11
+
+	stw r4, sp[0]
+	stw r5, sp[2]
+
+	//save the cp
+	ldaw r11, cp[0]
+	mov w_cp_save, r11
+
+	//adjust the buffer pointer
+	ldw w_temp, 	sp[1+WRITE_STACK_WORDS]	//row_words
+	sub w_temp, w_temp, r3 //word_count
+	ldaw w_temp, r0[-w_temp]
+	set cp, w_temp
+
+	add w_term_time, r2, 2
+	add w_term_time, w_term_time, r3
+	add w_term_time, w_term_time, r3
+
+	ldw w_temp, 	sp[1+WRITE_STACK_WORDS]	//row_words
+	sub w_temp, w_temp, r3
+	add w_temp, w_temp, w_temp
+
+	ldw w_ras, 		r1[2]	//ras
+	ldw w_we, 		r1[3]	//we
+	ldw w_dq_ah, 	r1[0]	//dq_ah
+
+.align 4
+	ldc w_two, 2
+	bru w_temp
+
+	//(blocking)
+	#include "sdram_block_write_body.inc"
+
+	setpt res[w_we], w_term_time
+	outpw res[w_we], w_two, 2
+
+	mkmsk w_temp, 32
+	out res[w_dq_ah], w_temp
+
+	add w_term_time, w_term_time, 8
+	setpt res[w_we],  w_term_time
+	outpw res[w_we],  w_two, 2
+	setpt res[w_ras], w_term_time
+	outpw res[w_ras], w_two, 2
+
+	set cp, w_cp_save
+
+	ldw r5, sp[2]
+	ldw r4, sp[0]
+
+	retsp WRITE_STACK_WORDS
+.globl sdram_block_write_xs2.nstackwords
+.linkset sdram_block_write_xs2.nstackwords, WRITE_STACK_WORDS
+.globl sdram_block_write_xs2.maxtimers
+.linkset sdram_block_write_xs2.maxtimers, 0
+.globl sdram_block_write_xs2.maxchanends
+.linkset sdram_block_write_xs2.maxchanends, 0
+.globl sdram_block_write_xs2.maxthreads
+.linkset sdram_block_write_xs2.maxthreads, 1
+.cc_bottom sdram_block_write_xs2.function
+
+.text
 .cc_top sdram_block_write.function
 .align 4
 .globl sdram_block_write
@@ -32,7 +116,7 @@ sdram_block_write:
 
 	//adjust the buffer pointer
 	ldw w_temp, 	sp[1+WRITE_STACK_WORDS]	//row_words
-	sub w_temp, w_temp, r3
+	sub w_temp, w_temp, r3 //word_count
 	ldaw w_temp, r0[-w_temp]
 	set cp, w_temp
 
@@ -82,8 +166,6 @@ sdram_block_write:
 .globl sdram_block_write.maxthreads
 .linkset sdram_block_write.maxthreads, 1
 .cc_bottom sdram_block_write.function
-
-
 
 .cc_top sdram_block_read.function
 .align 4
