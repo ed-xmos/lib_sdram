@@ -31,7 +31,6 @@ sdram_block_write_xs2:
 
 	//calc the new buffer pointer
   	ldc w_temp, 0
-  	//ldw w_temp, 	sp[1+WRITE_STACK_WORDS_XS2]	//row_words
   	sub new_num_words, w_temp, num_words // num_words = -num_words
   	ldaw new_buff_ptr, r0[-new_num_words]
 
@@ -174,7 +173,7 @@ sdram_block_write:
 .globl sdram_block_read_xs2
 .type  sdram_block_read_xs2, @function
 sdram_block_read_xs2:
-#define READ_STACK_WORDS_XS2 6
+#define READ_STACK_WORDS_XS2 7
 
     ENTSP_lu6 READ_STACK_WORDS_XS2
 
@@ -192,11 +191,13 @@ sdram_block_read_xs2:
 #define we 				r4
 #define start_time		r5
 #define sp_save			r6
+#define new_buf_ptr		r7
 #define temp 			r11
 
 	stw r4, sp[0]
 	stw r5, sp[3]
 	stw r6, sp[4]
+	stw r7, sp[6]
 
 	//save the dp to sp[5]
 	ldaw temp, dp[0]
@@ -218,16 +219,17 @@ sdram_block_read_xs2:
 	add term_time, start_time, r3
 	add term_time, term_time, r3
 
+	//calculate entry point for unrolled loop
 	ldw temp, 	sp[READ_STACK_WORDS_XS2+1]	//row_words
-	sub jump_reg, temp, r3
+	sub jump_reg, temp, r3	//TRASHES r3 - word_count
 	add jump_reg, jump_reg, jump_reg
 
 	ldaw sp_save, sp[0]
 
 	//load the ports
-	ldw ras, 	r1[2]	//ras
+	ldw ras, 	r1[2]	//ras - TRASHES buffer_pointer
 	ldw we, 	r1[3]	//we
-	ldw dq_ah, 	r1[0]	//dq_ah
+	ldw dq_ah, 	r1[0]	//dq_ah - TRASHES pointer to ports struct
 
 	//issue the we term signals(non-blocking)
 	setpt res[we], term_time
@@ -248,11 +250,17 @@ sdram_block_read_xs2:
 	in temp, res[dq_ah]	//input junk
 	bru jump_reg
 	#include "sdram_block_read_body.inc"
+
 /*
+	//calc the new buffer pointer
+  	ldc temp, 0
+  	sub new_num_words, temp, num_words // num_words = -num_words
+  	ldaw new_buff_ptr, r0[-new_num_words]
+
 rd_loop:
-    ldw w_temp, new_buff_ptr[new_num_words]
+    out res[w_dq_ah], temp
+    stw temp, new_buff_ptr[new_num_words]
     add new_num_words, new_num_words, 1
-    out res[w_dq_ah], w_temp
     bt new_num_words, wr_loop
 */
 
@@ -277,14 +285,15 @@ rd_loop_done:
 	mkmsk temp, 32
 	out res[dq_ah], temp
 
-	set sp, sp_save
+	set sp, sp_save //Restore SP
 
+
+	ldw r7, sp[6]
 	ldw temp, sp[5]
-	set dp, temp
-
 	ldw r6, sp[4]
 	ldw r5, sp[3]
 	ldw r4, sp[0]
+	set dp, temp
 	retsp READ_STACK_WORDS_XS2
 
 .globl sdram_block_read_xs2.nstackwords
