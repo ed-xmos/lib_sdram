@@ -3,6 +3,7 @@
 #include <xclib.h>
 #include "sdram.h"
 #include "control.h"
+#include <stdio.h>
 
 #define TIMER_TICKS_PER_US 250000000
 
@@ -120,6 +121,8 @@ typedef struct {
 
 void sdram_block_read(unsigned * buffer, sdram_ports &ports, unsigned t0, unsigned word_count, unsigned row_words, unsigned cas_latency);
 void sdram_block_write(unsigned * buffer, sdram_ports &ports, unsigned t0, unsigned word_count, unsigned row_words);
+void sdram_block_write_xs2(unsigned * buffer, sdram_ports &ports, unsigned t0, unsigned word_count, unsigned row_words);
+
 
 /*
  * These numbers are tuned for 62.5MIPS.
@@ -150,6 +153,10 @@ static inline void write_impl(unsigned row, unsigned col, unsigned bank,
 
     unsigned rowcol = (col << 16) | row | (bank<<BANK_SHIFT) | bank<<(BANK_SHIFT+16) | 1<<(10+16);
 
+    //printf("bank=%08x\trow=%08x\tcol=%08x\n", bank, row, col);
+    //printf("buffer=%p\tword_count=%d\trow_words=%d\n",buffer, word_count, row_words);
+
+
     unsigned t = partout_timestamped(cas, 1, CTRL_WE_NOP);
     t += WRITE_SETUP_LATENCY;
 
@@ -161,7 +168,9 @@ static inline void write_impl(unsigned row, unsigned col, unsigned bank,
 
     unsafe {
        sdram_ports ports = {*(unsigned*)&dq_ah, *(unsigned*)&cas,*(unsigned*)&ras, *(unsigned*)&we};
-        sdram_block_write(buffer, ports, t, word_count, row_words);
+//       sdram_block_write_xs2(buffer, ports, t, word_count, row_words);
+       sdram_block_write(buffer, ports, t, word_count, row_words);
+
     }
 }
 
@@ -189,7 +198,6 @@ static inline void read_impl(unsigned row, unsigned col, unsigned bank,
     dq_ah @ t <: rowcol;
     partout_timed(cas, 3, CTRL_CAS_ACTIVE | (CTRL_CAS_READ<<1) | (CTRL_CAS_NOP<<2), t);
     partout_timed(ras, 3, CTRL_RAS_ACTIVE | (CTRL_RAS_READ<<1) | (CTRL_RAS_NOP<<2), t);
-
 
     unsafe {
         sdram_ports ports = {*(unsigned*)&dq_ah, *(unsigned*)&cas,*(unsigned*)&ras, *(unsigned*)&we};
