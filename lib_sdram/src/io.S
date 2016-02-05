@@ -81,6 +81,7 @@ wr_loop_done:
 .linkset sdram_block_write_xs2.maxthreads, 1
 .cc_bottom sdram_block_write_xs2.function
 
+////////////////////////////////////////////////
 
 .cc_top sdram_block_write.function
 .align 4
@@ -165,6 +166,139 @@ sdram_block_write:
 .globl sdram_block_write.maxthreads
 .linkset sdram_block_write.maxthreads, 1
 .cc_bottom sdram_block_write.function
+
+/////////////////////////////////////////////
+
+.cc_top sdram_block_read_xs2.function
+.align 4
+.globl sdram_block_read_xs2
+.type  sdram_block_read_xs2, @function
+sdram_block_read_xs2:
+#define READ_STACK_WORDS_XS2 6
+
+    ENTSP_lu6 READ_STACK_WORDS_XS2
+
+ 	//r0 buffer pointer
+	//r1 sdram_ports struct
+	//r2 t0	- start time
+	//r3 word_count
+	//sp[1] row_words
+	//sp[2] cas_latency
+
+#define ras	 			r0
+#define dq_ah	 		r1
+#define term_time 		r2
+#define jump_reg 		r3
+#define we 				r4
+#define start_time		r5
+#define sp_save			r6
+#define temp 			r11
+
+	stw r4, sp[0]
+	stw r5, sp[3]
+	stw r6, sp[4]
+
+	//save the dp to sp[5]
+	ldaw temp, dp[0]
+	stw temp, sp[5]
+
+	//adjust the buffer pointer
+	ldw temp, 	sp[READ_STACK_WORDS_XS2+1]	//row_words
+	sub temp, temp, r3
+	ldaw temp, r0[-temp]
+	set dp, temp
+
+#define N (1)
+	//set the first input time (t+CAS+N)
+	ldw temp, 	sp[READ_STACK_WORDS_XS2+2]	//cas_latency
+	add start_time, r2, temp
+	add start_time, start_time, N
+
+	//calculate the time to issue the terminate cmd
+	add term_time, start_time, r3
+	add term_time, term_time, r3
+
+	ldw temp, 	sp[READ_STACK_WORDS_XS2+1]	//row_words
+	sub jump_reg, temp, r3
+	add jump_reg, jump_reg, jump_reg
+
+	ldaw sp_save, sp[0]
+
+	//load the ports
+	ldw ras, 	r1[2]	//ras
+	ldw we, 	r1[3]	//we
+	ldw dq_ah, 	r1[0]	//dq_ah
+
+	//issue the we term signals(non-blocking)
+	setpt res[we], term_time
+	ldc temp, 2
+	outpw res[we], temp, 2
+
+	//inc the term time by a few for the precharge
+	ldc temp, 12
+	add term_time, term_time, temp
+
+	//store the midway dp
+	ldaw temp, dp[63]
+	add temp, temp, 4
+	set sp, temp
+
+	setpt res[dq_ah], start_time	//(blocking)
+.align 4
+	in temp, res[dq_ah]	//input junk
+	bru jump_reg
+	#include "sdram_block_read_body.inc"
+/*
+rd_loop:
+    ldw w_temp, new_buff_ptr[new_num_words]
+    add new_num_words, new_num_words, 1
+    out res[w_dq_ah], w_temp
+    bt new_num_words, wr_loop
+*/
+
+rd_loop_done:
+
+	//r0	ras
+	//r1	dq_ah
+	//r2	term_time
+	//r3	-
+	//r4	we
+	//r5	-
+	//r11	used as a temp
+
+	syncr res[dq_ah]
+
+	ldc temp, 10
+	setpt res[ras], term_time
+	outpw res[ras], temp, 2
+	setpt res[we],  term_time
+	outpw res[we],  temp, 2
+
+	mkmsk temp, 32
+	out res[dq_ah], temp
+
+	set sp, sp_save
+
+	ldw temp, sp[5]
+	set dp, temp
+
+	ldw r6, sp[4]
+	ldw r5, sp[3]
+	ldw r4, sp[0]
+	retsp READ_STACK_WORDS_XS2
+
+.globl sdram_block_read_xs2.nstackwords
+.linkset sdram_block_read_xs2.nstackwords, READ_STACK_WORDS_XS2
+.globl sdram_block_read_xs2.maxtimers
+.linkset sdram_block_read_xs2.maxtimers, 0
+.globl sdram_block_read_xs2.maxchanends
+.linkset sdram_block_read_xs2.maxchanends, 0
+.globl sdram_block_read_xs2.maxthreads
+.linkset sdram_block_read_xs2.maxthreads, 1
+
+.cc_bottom sdram_block_read_xs2.function
+
+/////////////////////////////////////////////////////
 
 .cc_top sdram_block_read.function
 .align 4
@@ -285,5 +419,4 @@ sdram_block_read:
 .linkset sdram_block_read.maxthreads, 1
 
 .cc_bottom sdram_block_read.function
-
 

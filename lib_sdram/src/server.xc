@@ -120,6 +120,7 @@ typedef struct {
 } sdram_ports;
 
 void sdram_block_read(unsigned * buffer, sdram_ports &ports, unsigned t0, unsigned word_count, unsigned row_words, unsigned cas_latency);
+void sdram_block_read_xs2(unsigned * buffer, sdram_ports &ports, unsigned t0, unsigned word_count, unsigned row_words, unsigned cas_latency);
 void sdram_block_write(unsigned * buffer, sdram_ports &ports, unsigned t0, unsigned word_count, unsigned row_words);
 void sdram_block_write_xs2(unsigned * buffer, sdram_ports &ports, unsigned t0, unsigned word_count, unsigned row_words);
 
@@ -168,8 +169,8 @@ static inline void write_impl(unsigned row, unsigned col, unsigned bank,
 
     unsafe {
        sdram_ports ports = {*(unsigned*)&dq_ah, *(unsigned*)&cas,*(unsigned*)&ras, *(unsigned*)&we};
-//       sdram_block_write_xs2(buffer, ports, t, word_count, row_words);
-       sdram_block_write(buffer, ports, t, word_count, row_words);
+       sdram_block_write_xs2(buffer, ports, t, word_count, row_words);
+//       sdram_block_write(buffer, ports, t, word_count, row_words);
 
     }
 }
@@ -201,7 +202,9 @@ static inline void read_impl(unsigned row, unsigned col, unsigned bank,
 
     unsafe {
         sdram_ports ports = {*(unsigned*)&dq_ah, *(unsigned*)&cas,*(unsigned*)&ras, *(unsigned*)&we};
-        sdram_block_read( buffer, ports, t, word_count, row_words, cas_latency);
+        //sdram_block_read( buffer, ports, t, word_count, row_words, cas_latency);
+        sdram_block_read_xs2( buffer, ports, t, word_count, row_words, cas_latency);
+
     }
 }
 
