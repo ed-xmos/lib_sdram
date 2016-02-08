@@ -15,7 +15,7 @@ void application(streaming chanend c_server) {
   unsigned * movable read_buffer_pointer = read_buffer;
   unsigned * movable write_buffer_pointer = write_buffer;
 
-#define MEM_SIZE_EXP    21 //2^n 32b words
+#define MEM_SIZE_EXP    20 //2^n 32b words
 
   //1<<20 is halfway point for 64Mb memory
   //1<<22 is halfway point for 256Mb memory
@@ -28,7 +28,7 @@ void application(streaming chanend c_server) {
 #define FILL_BUFF_SIZE  128
 
   unsigned fill[FILL_BUFF_SIZE];
-  for(unsigned i=0;i<FILL_BUFF_SIZE;i++) fill[i] = 0xdeadbeaf;
+  for(unsigned i=0;i<FILL_BUFF_SIZE;i++) fill[i] = 0xdeadbeef;
 
   unsigned * movable write_buffer_pointer_fill = fill;
 
@@ -98,6 +98,7 @@ int main() {
 #else
                 2, 128, 16, 9, 13, 2, 64, 8192, 4); //256Mb
 #endif
+                //Note clock div 4 gives (500/ (4*2)) = 62.5MHz
     on tile[1]: application(c_sdram[0]);
     //on tile[1]: par(int i=0;i<6;i++) while(1);
   }
