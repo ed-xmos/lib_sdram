@@ -32,7 +32,7 @@ sdram_block_write_xs2:
 	//calc the new buffer pointer
   	ldc w_temp, 0
   	sub new_num_words, w_temp, num_words // num_words = -num_words
-  	ldaw new_buff_ptr, r0[-new_num_words]
+  	ldaw new_buff_ptr, r0[-new_num_words]// new_buff_ptr += (num_words * Bpw)
 
 	add w_term_time, r2, 2
 	add w_term_time, w_term_time, r3
@@ -166,7 +166,7 @@ sdram_block_write:
 .linkset sdram_block_write.maxthreads, 1
 .cc_bottom sdram_block_write.function
 
-/////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////
 
 .cc_top sdram_block_read_xs2.function
 .align 4
@@ -190,7 +190,8 @@ sdram_block_read_xs2:
 #define jump_reg 		r3
 #define we 				r4
 #define start_time		r5
-#define sp_save			r6
+//#define sp_save			r6
+#define n_words			r6
 #define new_buf_ptr		r7
 #define temp 			r11
 
@@ -200,14 +201,20 @@ sdram_block_read_xs2:
 	stw r7, sp[6]
 
 	//save the dp to sp[5]
-	ldaw temp, dp[0]
-	stw temp, sp[5]
+	//ldaw temp, dp[0]
+	//stw temp, sp[5]
 
 	//adjust the buffer pointer
-	ldw temp, 	sp[READ_STACK_WORDS_XS2+1]	//row_words
-	sub temp, temp, r3
-	ldaw temp, r0[-temp]
-	set dp, temp
+	//ldw temp, 	sp[READ_STACK_WORDS_XS2+1]	//row_words
+	//sub temp, temp, r3
+	//ldaw temp, r0[-temp]
+	//set dp, temp
+
+	ldc temp, 0
+	sub n_words, temp, r3 			// n_words = -n_words
+	ldaw new_buf_ptr, r0[-n_words]	// new_buf_ptr = buffer_pointer - (n_words * Bpw)
+
+
 
 #define N (1)
 	//set the first input time (t+CAS+N)
@@ -220,16 +227,16 @@ sdram_block_read_xs2:
 	add term_time, term_time, r3
 
 	//calculate entry point for unrolled loop
-	ldw temp, 	sp[READ_STACK_WORDS_XS2+1]	//row_words
-	sub jump_reg, temp, r3	//TRASHES r3 - word_count
-	add jump_reg, jump_reg, jump_reg
+	//ldw temp, 	sp[READ_STACK_WORDS_XS2+1]	//row_words
+	//sub jump_reg, temp, r3	//TRASHES r3 - word_count
+	//add jump_reg, jump_reg, jump_reg
 
-	ldaw sp_save, sp[0]
+	//ldaw sp_save, sp[0]
 
 	//load the ports
-	ldw ras, 	r1[2]	//ras - TRASHES buffer_pointer
-	ldw we, 	r1[3]	//we
-	ldw dq_ah, 	r1[0]	//dq_ah - TRASHES pointer to ports struct
+	ldw ras, 	r1[2]	//ras - TRASHES buffer_pointer r0
+	ldw we, 	r1[3]	//we r4
+	ldw dq_ah, 	r1[0]	//dq_ah - TRASHES pointer to ports struct r1
 
 	//issue the we term signals(non-blocking)
 	setpt res[we], term_time
@@ -241,28 +248,23 @@ sdram_block_read_xs2:
 	add term_time, term_time, temp
 
 	//store the midway dp
-	ldaw temp, dp[63]
-	add temp, temp, 4
-	set sp, temp
+	//ldaw temp, dp[63]
+	//add temp, temp, 4
+	//set sp, temp
 
 	setpt res[dq_ah], start_time	//(blocking)
 .align 4
 	in temp, res[dq_ah]	//input junk
-	bru jump_reg
-	#include "sdram_block_read_body.inc"
+	//bru jump_reg
+	//#include "sdram_block_read_body.inc"
 
-/*
-	//calc the new buffer pointer
-  	ldc temp, 0
-  	sub new_num_words, temp, num_words // num_words = -num_words
-  	ldaw new_buff_ptr, r0[-new_num_words]
 
 rd_loop:
-    out res[w_dq_ah], temp
-    stw temp, new_buff_ptr[new_num_words]
-    add new_num_words, new_num_words, 1
-    bt new_num_words, wr_loop
-*/
+    in temp, res[dq_ah]
+    stw temp, new_buf_ptr[n_words]
+    add n_words, n_words, 1
+    bt n_words, rd_loop
+
 
 rd_loop_done:
 
@@ -285,7 +287,7 @@ rd_loop_done:
 	mkmsk temp, 32
 	out res[dq_ah], temp
 
-	set sp, sp_save //Restore SP
+	//set sp, sp_save //Restore SP
 
 
 	ldw r7, sp[6]
@@ -293,7 +295,7 @@ rd_loop_done:
 	ldw r6, sp[4]
 	ldw r5, sp[3]
 	ldw r4, sp[0]
-	set dp, temp
+	//set dp, temp
 	retsp READ_STACK_WORDS_XS2
 
 .globl sdram_block_read_xs2.nstackwords
@@ -307,7 +309,7 @@ rd_loop_done:
 
 .cc_bottom sdram_block_read_xs2.function
 
-/////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
 
 .cc_top sdram_block_read.function
 .align 4
