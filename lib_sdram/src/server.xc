@@ -169,8 +169,8 @@ static inline void write_impl(unsigned row, unsigned col, unsigned bank,
 
     unsafe {
        sdram_ports ports = {*(unsigned*)&dq_ah, *(unsigned*)&cas,*(unsigned*)&ras, *(unsigned*)&we};
-//       sdram_block_write_xs2(buffer, ports, t, word_count, row_words);
-       sdram_block_write(buffer, ports, t, word_count, row_words);
+       sdram_block_write_xs2(buffer, ports, t, word_count, row_words);
+       //sdram_block_write(buffer, ports, t, word_count, row_words);
 
     }
 }
@@ -204,8 +204,8 @@ static inline void read_impl(unsigned row, unsigned col, unsigned bank,
 
     unsafe {
         sdram_ports ports = {*(unsigned*)&dq_ah, *(unsigned*)&cas,*(unsigned*)&ras, *(unsigned*)&we};
-        sdram_block_read( buffer, ports, t, word_count, row_words, cas_latency);
-        //sdram_block_read_xs2( buffer, ports, t, word_count, row_words, cas_latency);
+        //sdram_block_read( buffer, ports, t, word_count, row_words, cas_latency);
+        sdram_block_read_xs2( buffer, ports, t, word_count, row_words, cas_latency);
 
     }
 }

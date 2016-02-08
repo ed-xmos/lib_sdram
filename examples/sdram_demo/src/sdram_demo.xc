@@ -15,7 +15,7 @@ void application(streaming chanend c_server) {
   unsigned * movable read_buffer_pointer = read_buffer;
   unsigned * movable write_buffer_pointer = write_buffer;
 
-#define MEM_SIZE_EXP    20 //2^n 32b words
+#define MEM_SIZE_EXP    21 //2^n 32b words
 
   //1<<20 is halfway point for 64Mb memory
   //1<<22 is halfway point for 256Mb memory
@@ -94,9 +94,9 @@ int main() {
               sdram_clk,
               sdram_cb,
 #if 1
-              2, 128, 16, 8, 12, 2, 64, 4096, 4); //64Mb
+              2, 128, 16, 8, 12, 2, 64, 4096, 6); //64Mb
 #else
-                2, 128, 16, 9, 13, 2, 64, 8192, 4); //256Mb
+                2, 128, 16, 9, 13, 2, 64, 8192, 6); //256Mb
 #endif
                 //Note clock div 4 gives (500/ (4*2)) = 62.5MHz
     on tile[1]: application(c_sdram[0]);
