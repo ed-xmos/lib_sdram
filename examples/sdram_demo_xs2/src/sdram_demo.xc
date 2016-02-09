@@ -5,7 +5,7 @@
 #include "sdram.h"
 
 /*
- * Put an sdram slice into square slot of A16 board.
+ * Put an sdram slice into square slot of xCore200 slice-kit board.
  */
 
 void application(streaming chanend c_server) {

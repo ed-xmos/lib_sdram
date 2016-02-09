@@ -1,12 +1,15 @@
 // Copyright (c) 2016, XMOS Ltd, All rights reserved
-.cc_top sdram_block_write_xs2.function
-.align 4
-.globl sdram_block_write_xs2
-.type  sdram_block_write_xs2, @function
-sdram_block_write_xs2:
 
-#define WRITE_STACK_WORDS_XS2 4
-	ENTSP_lu6 WRITE_STACK_WORDS_XS2
+#ifdef __XS2A__
+.cc_top sdram_block_write.function
+.align 4
+.globl sdram_block_write
+.type  sdram_block_write, @function
+sdram_block_write:
+.issue_mode dual
+
+#define WRITE_STACK_WORDS 4
+	DUALENTSP_lu6 WRITE_STACK_WORDS
 
 #define buffer_pointer		r0
 #define num_words			r3
@@ -69,19 +72,19 @@ wr_loop_done:
 	ldw r7, sp[3]
 
 
-	retsp WRITE_STACK_WORDS_XS2
-.globl sdram_block_write_xs2.nstackwords
-.linkset sdram_block_write_xs2.nstackwords, WRITE_STACK_WORDS_XS2
-.globl sdram_block_write_xs2.maxtimers
-.linkset sdram_block_write_xs2.maxtimers, 0
-.globl sdram_block_write_xs2.maxchanends
-.linkset sdram_block_write_xs2.maxchanends, 0
-.globl sdram_block_write_xs2.maxthreads
-.linkset sdram_block_write_xs2.maxthreads, 1
-.cc_bottom sdram_block_write_xs2.function
+	retsp WRITE_STACK_WORDS
+.globl sdram_block_write.nstackwords
+.linkset sdram_block_write.nstackwords, WRITE_STACK_WORDS
+.globl sdram_block_write.maxtimers
+.linkset sdram_block_write.maxtimers, 0
+.globl sdram_block_write.maxchanends
+.linkset sdram_block_write.maxchanends, 0
+.globl sdram_block_write.maxthreads
+.linkset sdram_block_write.maxthreads, 1
+.cc_bottom sdram_block_write.function
 
 ////////////////////////////////////////////////
-
+#else
 .cc_top sdram_block_write.function
 .align 4
 .globl sdram_block_write
@@ -165,17 +168,20 @@ sdram_block_write:
 .globl sdram_block_write.maxthreads
 .linkset sdram_block_write.maxthreads, 1
 .cc_bottom sdram_block_write.function
+#endif
 
 //////////////////////////////////////////////////////////////////
 
-.cc_top sdram_block_read_xs2.function
+#ifdef __XS2A__
+.cc_top sdram_block_read.function
 .align 4
-.globl sdram_block_read_xs2
-.type  sdram_block_read_xs2, @function
-sdram_block_read_xs2:
-#define READ_STACK_WORDS_XS2 6
+.globl sdram_block_read
+.type  sdram_block_read, @function
+sdram_block_read:
+#define READ_STACK_WORDS 6
+.issue_mode dual
 
-    ENTSP_lu6 READ_STACK_WORDS_XS2
+    DUALENTSP_lu6 READ_STACK_WORDS
 
  	//r0 buffer pointer
 	//r1 sdram_ports struct
@@ -208,7 +214,7 @@ sdram_block_read_xs2:
 
 #define N (1)
 	//set the first input time (t+CAS+N)
-	ldw temp, 	sp[READ_STACK_WORDS_XS2+2]	//cas_latency
+	ldw temp, 	sp[READ_STACK_WORDS+2]	//cas_latency
 	add start_time, r2, temp
 	add start_time, start_time, N
 
@@ -267,19 +273,19 @@ rd_loop_done:
 	ldw r5, sp[3]
 	ldw r4, sp[0]
 	//set dp, temp
-	retsp READ_STACK_WORDS_XS2
+	retsp READ_STACK_WORDS
 
-.globl sdram_block_read_xs2.nstackwords
-.linkset sdram_block_read_xs2.nstackwords, READ_STACK_WORDS_XS2
-.globl sdram_block_read_xs2.maxtimers
-.linkset sdram_block_read_xs2.maxtimers, 0
-.globl sdram_block_read_xs2.maxchanends
-.linkset sdram_block_read_xs2.maxchanends, 0
-.globl sdram_block_read_xs2.maxthreads
-.linkset sdram_block_read_xs2.maxthreads, 1
+.globl sdram_block_read.nstackwords
+.linkset sdram_block_read.nstackwords, READ_STACK_WORDS
+.globl sdram_block_read.maxtimers
+.linkset sdram_block_read.maxtimers, 0
+.globl sdram_block_read.maxchanends
+.linkset sdram_block_read.maxchanends, 0
+.globl sdram_block_read.maxthreads
+.linkset sdram_block_read.maxthreads, 1
 
-.cc_bottom sdram_block_read_xs2.function
-
+.cc_bottom sdram_block_read.function
+#else
 //////////////////////////////////////////////////////////////////////////////
 
 .cc_top sdram_block_read.function
@@ -401,4 +407,4 @@ sdram_block_read:
 .linkset sdram_block_read.maxthreads, 1
 
 .cc_bottom sdram_block_read.function
-
+#endif
