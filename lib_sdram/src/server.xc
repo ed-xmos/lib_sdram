@@ -188,6 +188,7 @@ static inline void read_impl(unsigned row, unsigned col, unsigned bank,
             col = ((1<<c.col_address_bits) - 1);
     }
 */
+    printf("bank=%x\trow=%x\tcol=%x\n", bank, row, col);
     unsigned rowcol = (col << 16) | row | (bank<<BANK_SHIFT) | bank<<(BANK_SHIFT+16) | 1<<(10+16);
 
     printf("buffer=%p\tword_count=%d\n", buffer, word_count);
@@ -221,6 +222,8 @@ static void read(unsigned start_row, unsigned start_col,
   unsigned words_to_end_of_line;
   unsigned current_col = start_col, current_row = start_row;
   unsigned remaining_words = word_count;
+
+  //printf("current_col=%x, col_count=%x, remaining_words=%x\n", current_col, (1<<col_address_bits), remaining_words);
 
   while (1) {
     unsigned col_count = (1<<col_address_bits);
@@ -280,7 +283,7 @@ static void write(unsigned start_row, unsigned start_col,
 
 //TODO use the 16 bit ness to do the below correctly
 static unsigned addr_to_col(unsigned address, const static unsigned  row_words){
-    return 0xff&(address & (row_words-1))<<1;
+    return (address & (row_words-1))<<1;
 }
 static unsigned addr_to_row(unsigned address, const static unsigned col_address_bits, const static unsigned row_address_bits){
     return (address>>(col_address_bits-1)) & ((1<<row_address_bits)-1);
