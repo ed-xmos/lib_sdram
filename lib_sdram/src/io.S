@@ -48,10 +48,8 @@ sdram_block_write:
 	ldc w_two, 2
 
 wr_loop:
-    ldw w_temp, new_buff_ptr[new_num_words]
-    add new_num_words, new_num_words, 1
-    out res[w_dq_ah], w_temp
-    bt new_num_words, wr_loop
+    {ldw w_temp, new_buff_ptr[new_num_words]; add new_num_words, new_num_words, 1}
+    {out res[w_dq_ah], w_temp; bt new_num_words, wr_loop}
 
 wr_loop_done:
 	setpt res[w_we], w_term_time
@@ -196,23 +194,24 @@ sdram_block_read:
 #define jump_reg 		r3
 #define we 				r4
 #define start_time		r5
-#define n_words			r6
-#define new_buf_ptr		r7
+#define sp_save			r6
 #define temp 			r11
 
 	stw r4, sp[0]
-	ldc temp, 0
 	stw r5, sp[3]
 	stw r6, sp[4]
-	stw r7, sp[5]
 
-	//Calculate buffer pointer (points to top with negative offset) & counter (counts from minus to zero)
-	sub n_words, temp, r3 			// n_words = -n_words
-	ldaw new_buf_ptr, r0[-n_words]	// new_buf_ptr = buffer_pointer - (n_words * Bpw)
+	//save the dp to sp[5]
+	ldaw temp, dp[0]
+	stw temp, sp[5]
 
+	//adjust the buffer pointer
+	ldw temp, 	sp[READ_STACK_WORDS+1]	//row_words
+	sub temp, temp, r3
+	ldaw temp, r0[-temp]
+	set dp, temp
 
-
-#define N (1)
+#define N (1) //This is an adjustment factor for turn around of 16b buffered port. Works down to about 40MHz, else should be zero
 	//set the first input time (t+CAS+N)
 	ldw temp, 	sp[READ_STACK_WORDS+2]	//cas_latency
 	add start_time, r2, temp
@@ -222,10 +221,16 @@ sdram_block_read:
 	add term_time, start_time, r3
 	add term_time, term_time, r3
 
+	ldw temp, 	sp[READ_STACK_WORDS+1]	//row_words
+	sub jump_reg, temp, r3
+	add jump_reg, jump_reg, jump_reg
+
+	ldaw sp_save, sp[0]
+
 	//load the ports
-	ldw ras, 	r1[2]	//ras - TRASHES buffer_pointer r0
-	ldw we, 	r1[3]	//we r4
-	ldw dq_ah, 	r1[0]	//dq_ah - TRASHES pointer to ports struct r1
+	ldw ras, 	r1[2]	//ras
+	ldw we, 	r1[3]	//we
+	ldw dq_ah, 	r1[0]	//dq_ah
 
 	//issue the we term signals(non-blocking)
 	setpt res[we], term_time
@@ -236,18 +241,16 @@ sdram_block_read:
 	ldc temp, 12
 	add term_time, term_time, temp
 
+	//store the midway dp
+	ldaw temp, dp[63]
+	add temp, temp, 4
+	set sp, temp
+
 	setpt res[dq_ah], start_time	//(blocking)
-.align 4
+.align 8
 	in temp, res[dq_ah]	//input junk
-
-rd_loop:
-    in temp, res[dq_ah]
-    stw temp, new_buf_ptr[n_words]
-    add n_words, n_words, 1
-    bt n_words, rd_loop
-
-
-rd_loop_done:
+	bru jump_reg
+	#include "sdram_block_read_body_xs2.inc"
 
 	//r0	ras
 	//r1	dq_ah
@@ -268,11 +271,14 @@ rd_loop_done:
 	mkmsk temp, 32
 	out res[dq_ah], temp
 
-	ldw r7, sp[5]
+	set sp, sp_save
+
+	ldw temp, sp[5]
+	set dp, temp
+
 	ldw r6, sp[4]
 	ldw r5, sp[3]
 	ldw r4, sp[0]
-	//set dp, temp
 	retsp READ_STACK_WORDS
 
 .globl sdram_block_read.nstackwords
@@ -285,6 +291,8 @@ rd_loop_done:
 .linkset sdram_block_read.maxthreads, 1
 
 .cc_bottom sdram_block_read.function
+#endif
+
 #else
 //////////////////////////////////////////////////////////////////////////////
 
@@ -327,7 +335,7 @@ sdram_block_read:
 	ldaw temp, r0[-temp]
 	set dp, temp
 
-#define N (1)
+#define N (1) //This is an adjustment factor for turn around of 16b buffered port. Works down to about 40MHz, else should be zero
 	//set the first input time (t+CAS+N)
 	ldw temp, 	sp[READ_STACK_WORDS+2]	//cas_latency
 	add start_time, r2, temp
