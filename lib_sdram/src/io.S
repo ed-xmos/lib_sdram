@@ -216,7 +216,7 @@ sdram_block_read:
 	add term_time, start_time, r3
 	add term_time, term_time, r3
 
-	ldw temp, 	sp[READ_STACK_WORDS+1]	//row_words
+	ldc temp, 	256
 	sub jump_reg, temp, r3				//Subtract the number of words to read
 	shl jump_reg, jump_reg, 1			//Multiply by 2 (2 x 16b instructions at a time)
 
