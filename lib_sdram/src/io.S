@@ -194,22 +194,17 @@ sdram_block_read:
 #define jump_reg 		r3
 #define we 				r4
 #define start_time		r5
-#define sp_save			r6
+#define new_buf_ptr			r6
 #define temp 			r11
 
 	stw r4, sp[0]
 	stw r5, sp[3]
 	stw r6, sp[4]
 
-	//save the dp to sp[5]
-	ldaw temp, dp[0]
-	stw temp, sp[5]
 
-	//adjust the buffer pointer
-	ldw temp, 	sp[READ_STACK_WORDS+1]	//row_words
-	sub temp, temp, r3
-	ldaw temp, r0[-temp]
-	set dp, temp
+	//Calculate the buffer pointer.
+	sub new_buf_ptr, r0, 0
+
 
 #define N (1) //This is an adjustment factor for turn around of 16b buffered port. Works down to about 40MHz, else should be zero
 	//set the first input time (t+CAS+N)
@@ -222,10 +217,8 @@ sdram_block_read:
 	add term_time, term_time, r3
 
 	ldw temp, 	sp[READ_STACK_WORDS+1]	//row_words
-	sub jump_reg, temp, r3
-	add jump_reg, jump_reg, jump_reg
-
-	ldaw sp_save, sp[0]
+	sub jump_reg, temp, r3				//Subtract the number of words to read
+	shl jump_reg, jump_reg, 1			//Multiply by 2 (2 x 16b instructions at a time)
 
 	//load the ports
 	ldw ras, 	r1[2]	//ras
@@ -241,15 +234,14 @@ sdram_block_read:
 	ldc temp, 12
 	add term_time, term_time, temp
 
-	//store the midway dp
-	ldaw temp, dp[63]
-	add temp, temp, 4
-	set sp, temp
 
 	setpt res[dq_ah], start_time	//(blocking)
+
 .align 8
 	in temp, res[dq_ah]	//input junk
 	bru jump_reg
+
+sdram_block_read_jump_table:
 	#include "sdram_block_read_body_xs2.inc"
 
 	//r0	ras
@@ -260,6 +252,7 @@ sdram_block_read:
 	//r5	-
 	//r11	used as a temp
 
+sdram_block_read_cleanup:
 	syncr res[dq_ah]
 
 	ldc temp, 10
@@ -270,11 +263,6 @@ sdram_block_read:
 
 	mkmsk temp, 32
 	out res[dq_ah], temp
-
-	set sp, sp_save
-
-	ldw temp, sp[5]
-	set dp, temp
 
 	ldw r6, sp[4]
 	ldw r5, sp[3]
@@ -291,7 +279,6 @@ sdram_block_read:
 .linkset sdram_block_read.maxthreads, 1
 
 .cc_bottom sdram_block_read.function
-#endif
 
 #else
 //////////////////////////////////////////////////////////////////////////////
