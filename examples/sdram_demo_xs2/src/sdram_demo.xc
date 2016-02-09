@@ -40,11 +40,11 @@ void application(streaming chanend c_server) {
   _Exit(0);
 }
 
-on tile[1] : out buffered port:32   sdram_dq_ah                 = XS1_PORT_16A;
-on tile[1] : out buffered port:32   sdram_cas                   = XS1_PORT_1B;
-on tile[1] : out buffered port:32   sdram_ras                   = XS1_PORT_1G;
-on tile[1] : out buffered port:8    sdram_we                    = XS1_PORT_1C;
-on tile[1] : out port               sdram_clk                   = XS1_PORT_1F;
+on tile[1] : out buffered port:32   sdram_dq_ah                 = XS1_PORT_16B;
+on tile[1] : out buffered port:32   sdram_cas                   = XS1_PORT_1J;
+on tile[1] : out buffered port:32   sdram_ras                   = XS1_PORT_1I;
+on tile[1] : out buffered port:8    sdram_we                    = XS1_PORT_1K;
+on tile[1] : out port               sdram_clk                   = XS1_PORT_1L;
 on tile[1] : clock                  sdram_cb                    = XS1_CLKBLK_1;
 
 int main() {
@@ -57,7 +57,7 @@ int main() {
               sdram_we,
               sdram_clk,
               sdram_cb,
-              2, 128, 16, 8,12, 2, 64, 4096, 8);
+              2, 128, 16, 8,12, 2, 64, 4096, 6);
     on tile[1]: application(c_sdram[0]);
     on tile[1]: par(int i=0;i<3;i++) while(1);
   }
