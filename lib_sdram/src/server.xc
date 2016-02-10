@@ -188,10 +188,10 @@ static inline void read_impl(unsigned row, unsigned col, unsigned bank,
             col = ((1<<c.col_address_bits) - 1);
     }
 */
-    printf("bank=%x\trow=%x\tcol=%x\n", bank, row, col);
+    //printf("bank=%x\trow=%x\tcol=%x\n", bank, row, col);
     unsigned rowcol = (col << 16) | row | (bank<<BANK_SHIFT) | bank<<(BANK_SHIFT+16) | 1<<(10+16);
 
-    printf("buffer=%p\tword_count=%d\n", buffer, word_count);
+    //printf("buffer=%p\trow_words=%d\tword_count=%d\n", buffer, row_words, word_count);
 
     unsigned t = partout_timestamped(ras, 1, CTRL_RAS_NOP);
     t += READ_SETUP_LATENCY;

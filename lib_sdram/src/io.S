@@ -216,7 +216,7 @@ sdram_block_read:
 	add term_time, start_time, r3
 	add term_time, term_time, r3
 
-	ldc temp, 	256
+	ldc temp, 	256						//The number of in/store cycles unrolled in the jump table
 	sub jump_reg, temp, r3				//Subtract the number of words to read
 	shl jump_reg, jump_reg, 1			//Multiply by 2 (2 x 16b instructions at a time)
 
