@@ -10,6 +10,7 @@
 
 
 void application(streaming chanend c_server) {
+  set_core_fast_mode_on();
 #define BUF_WORDS (8)
   unsigned read_buffer[BUF_WORDS];
   unsigned write_buffer[BUF_WORDS];
@@ -20,7 +21,6 @@ void application(streaming chanend c_server) {
 
   //1<<20 is halfway point for 64Mb memory
   //1<<22 is halfway point for 256Mb memory
-  //unsigned base_addr = (1 << 22) - 4; // 2^(12b row + 8b col + 2b bank) = 2M words 32b = 64Mb
   unsigned base_addr = (1 << MEM_SIZE_EXP) - 4; // 2^(13b row + 9b col + 2b bank) = 8M words 32b = 256Mb
 
   s_sdram_state sdram_state;
@@ -95,13 +95,13 @@ int main() {
               sdram_clk,
               sdram_cb,
 #if 0
-              2, 128, 16, 8, 12, 2, 64, 4096, 6); //64Mb
+              2, 128, 16, 8, 12, 2, 64, 4096, 4); //64Mb
 #else
-                2, 256, 16, 9, 13, 2, 64, 8192, 6); //256Mb
+                2, 256, 16, 9, 13, 2, 64, 8192, 4); //256Mb
 #endif
                 //Note clock div 4 gives (500/ (4*2)) = 62.5MHz
     on tile[1]: application(c_sdram[0]);
-    //on tile[1]: par(int i=0;i<6;i++) while(1);
+    on tile[1]: par(int i=0;i<6;i++) while(1);
   }
   return 0;
 }
