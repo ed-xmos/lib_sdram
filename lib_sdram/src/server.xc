@@ -60,7 +60,7 @@ void sdram_init(
   set_port_clock(we, cb);
 
   set_pad_delay(dq_ah,0);
-  set_port_sample_delay(dq_ah);
+  //set_port_sample_delay(dq_ah);
 
   start_clock(cb);
 
@@ -125,8 +125,8 @@ void sdram_block_write(unsigned * buffer, sdram_ports &ports, unsigned t0, unsig
 /*
  * These numbers are tuned for 62.5MIPS.
  */
-#define WRITE_SETUP_LATENCY (240)
-#define READ_SETUP_LATENCY  (210)
+#define WRITE_SETUP_LATENCY (160)
+#define READ_SETUP_LATENCY  (140)
 
 #define BANK_SHIFT          (13)//FIXME 15 - bank_address_bits
 

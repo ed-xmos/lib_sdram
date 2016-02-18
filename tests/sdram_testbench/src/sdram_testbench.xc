@@ -17,7 +17,7 @@
 
 #define CAS_LATENCY   2
 #define REFRESH_MS    64
-#define CLOCK_DIV     12 //Note clock div 4 gives (500/ (4*2)) = 62.5MHz
+#define CLOCK_DIV     8 //Note clock div 4 gives (500/ (4*2)) = 62.5MHz
 #define DATA_BITS     16
 
 #if SDRAM_256Mb
