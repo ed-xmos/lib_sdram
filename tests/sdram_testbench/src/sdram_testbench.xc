@@ -384,12 +384,12 @@ void sdram_client(streaming chanend c_server) {
 
 //Use port mapping according to slicekit used
 #ifdef __XS2A__
-//Slot 6 on xCORE200 slicekit
-#define      SERVER_TILE            1
-on tile[SERVER_TILE] : out buffered port:32   sdram_dq_ah                 = XS1_PORT_16A; //4b of this are muxed
-on tile[SERVER_TILE] : out buffered port:32   sdram_cas                   = XS1_PORT_1B;  //Muxed via 74CBTLV3257
+//Slot 2 on xCORE200 slicekit
+#define      SERVER_TILE            0
+on tile[SERVER_TILE] : out buffered port:32   sdram_dq_ah                 = XS1_PORT_16A;
+on tile[SERVER_TILE] : out buffered port:32   sdram_cas                   = XS1_PORT_1B;
 on tile[SERVER_TILE] : out buffered port:32   sdram_ras                   = XS1_PORT_1O;
-on tile[SERVER_TILE] : out buffered port:8    sdram_we                    = XS1_PORT_1C;  //Muxed via 74CBTLV3257
+on tile[SERVER_TILE] : out buffered port:8    sdram_we                    = XS1_PORT_1C;
 on tile[SERVER_TILE] : out port               sdram_clk                   = XS1_PORT_1N;
 on tile[SERVER_TILE] : out port               spi_mux_ctl                 = XS1_PORT_4F;
 on tile[SERVER_TILE] : clock                  sdram_cb                    = XS1_CLKBLK_2;
