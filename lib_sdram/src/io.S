@@ -221,7 +221,7 @@ sdram_block_read:
 	sub new_buf_ptr, r0, 0
 
 
-#define N (1) //This is an adjustment factor for turn around of 16b buffered port. Works down to about 40MHz, else should be zero
+#define N (0) //This is an adjustment factor for turn around of 16b buffered port. Works down to about 40MHz, else should be zero
 	//set the first input time (t+CAS+N)
 	ldw temp, 	sp[READ_STACK_WORDS+2]	//cas_latency
 	add start_time, r2, temp

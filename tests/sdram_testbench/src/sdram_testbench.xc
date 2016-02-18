@@ -17,7 +17,7 @@
 
 #define CAS_LATENCY   2
 #define REFRESH_MS    64
-#define CLOCK_DIV     5 //Note clock div 4 gives (500/ (4*2)) = 62.5MHz
+#define CLOCK_DIV     12 //Note clock div 4 gives (500/ (4*2)) = 62.5MHz
 #define DATA_BITS     16
 
 #if SDRAM_256Mb
@@ -384,14 +384,14 @@ void sdram_client(streaming chanend c_server) {
 
 //Use port mapping according to slicekit used
 #ifdef __XS2A__
-//Slot 6 on xCORE200 slicekit
-#define      SERVER_TILE            0
-on tile[SERVER_TILE] : out buffered port:32   sdram_dq_ah                 = XS1_PORT_16A; //4b of this are muxed
-on tile[SERVER_TILE] : out buffered port:32   sdram_cas                   = XS1_PORT_1B;  //Muxed via 74CBTLV3257
-on tile[SERVER_TILE] : out buffered port:32   sdram_ras                   = XS1_PORT_1O;
-on tile[SERVER_TILE] : out buffered port:8    sdram_we                    = XS1_PORT_1C;  //Muxed via 74CBTLV3257
-on tile[SERVER_TILE] : out port               sdram_clk                   = XS1_PORT_1N;
-on tile[SERVER_TILE] : out port               spi_mux_ctl                 = XS1_PORT_4F;
+//Slot 4 on xCORE200 XU216 slicekit
+#define      SERVER_TILE            1
+on tile[SERVER_TILE] : out buffered port:32   sdram_dq_ah                 = XS1_PORT_16B;   //4b of this port is IOT
+on tile[SERVER_TILE] : out buffered port:32   sdram_cas                   = XS1_PORT_1J;
+on tile[SERVER_TILE] : out buffered port:32   sdram_ras                   = XS1_PORT_1I;
+on tile[SERVER_TILE] : out buffered port:8    sdram_we                    = XS1_PORT_1K;
+on tile[SERVER_TILE] : out port               sdram_clk                   = XS1_PORT_1L;
+//on tile[SERVER_TILE] : out port               spi_mux_ctl                 = XS1_PORT_4F;
 on tile[SERVER_TILE] : clock                  sdram_cb                    = XS1_CLKBLK_2;
 #else
 //Square slot on A16 slicekit
@@ -410,9 +410,9 @@ int main() {
     on tile[SERVER_TILE]:sdram_client(c_sdram[0]);
 
     on tile[SERVER_TILE]:{
-        spi_mux_ctl <: 0b1000;  //Set enable to 1
-        delay_microseconds(1);
-        spi_mux_ctl <: 0b1100;  //Latch it in
+        //spi_mux_ctl <: 0b1000;  //Set enable to 1
+        //delay_microseconds(1);
+        //spi_mux_ctl <: 0b1100;  //Latch it in
 
         sdram_server(c_sdram, 1,
 

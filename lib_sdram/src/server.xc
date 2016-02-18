@@ -125,8 +125,8 @@ void sdram_block_write(unsigned * buffer, sdram_ports &ports, unsigned t0, unsig
 /*
  * These numbers are tuned for 62.5MIPS.
  */
-#define WRITE_SETUP_LATENCY (80)
-#define READ_SETUP_LATENCY  (70)
+#define WRITE_SETUP_LATENCY (240)
+#define READ_SETUP_LATENCY  (210)
 
 #define BANK_SHIFT          (13)//FIXME 15 - bank_address_bits
 
