@@ -17,7 +17,7 @@
 
 #define CAS_LATENCY   2
 #define REFRESH_MS    64
-#define CLOCK_DIV     8 //Note clock div 4 gives (500/ (4*2)) = 62.5MHz
+#define CLOCK_DIV     50 //Note clock div 4 gives (500/ (4*2)) = 62.5MHz
 #define DATA_BITS     16
 
 #if SDRAM_256Mb
@@ -69,6 +69,8 @@ static void whole_memory_write_read(streaming chanend c_server, s_sdram_state &s
 
     if (VERBOSE_MSG) printf("Begin   : whole_memory_write_read\n");
 
+#if 1
+
     //clear memory to know value
     for(unsigned i=0;i<TEST_WORDS;i++)
         buffer_pointer[i] = 0xdeafbeef;
@@ -88,7 +90,11 @@ static void whole_memory_write_read(streaming chanend c_server, s_sdram_state &s
         sdram_complete(c_server, sdram_state, buffer_pointer);
     }
 
+
+#endif
     printf("written\n");
+
+
 
 #if FAST_TEST
     for(unsigned addr = 0; addr < TOTAL_MEMORY_WORDS; addr += TEST_WORDS){
