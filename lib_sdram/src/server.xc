@@ -9,6 +9,8 @@
 
 #define MINIMUM_REFRESH_COUNT 8
 
+on tile[0]:out port cke = XS1_PORT_1G;
+
 static void refresh(unsigned ncycles,
         out buffered port:32 cas,
         out buffered port:32 ras){
@@ -36,6 +38,9 @@ void sdram_init(
 ) {
   timer T;
   int time, t;
+
+  //CKE low. On modded board CKE is pulled low
+  cke <: 0;
 
   //Output NOP
   cas <: CTRL_CAS_NOP;
@@ -117,6 +122,9 @@ void sdram_init(
   //Wait 50us
   T :> time;
   T when timerafter(time + 50 * TIMER_TICKS_PER_US) :> time;
+
+  //Bring CKE high
+  cke <: 1;
 
   //Issue PRECHARGE ALL
   dq_ah <: 0x04000400 @ t; //Set A10 high
