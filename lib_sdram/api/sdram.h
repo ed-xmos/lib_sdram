@@ -34,7 +34,7 @@
  **/
 void sdram_server(streaming chanend c_client[client_count],
         const static unsigned client_count,
-        out buffered port:32 dq_ah,
+        buffered port:32 dq_ah,
         out buffered port:32 cas,
         out buffered port:32 ras,
         out buffered port:8 we,

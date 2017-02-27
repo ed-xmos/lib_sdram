@@ -30,7 +30,7 @@ static void refresh(unsigned ncycles,
 //We can use this prior to mode register set to ensure that the command is 
 //received without contention on the multiplixed bus
 static void force_dq_ah_release(
-        out buffered port:32 dq_ah,
+        buffered port:32 dq_ah,
         out buffered port:32 cas,
         out buffered port:32 ras,
         out buffered port:8 we) {
@@ -61,7 +61,7 @@ static void force_dq_ah_release(
 
   //Have we outputted a write or a writepre?
   if (tmp & 0x400) { //It was a writepre. Sit it out. May be up to 512 clocks
-    t+=512; //Whole row + some recovery time
+    t+=1024; //Whole row + some recovery time
             //TODO, if we want top support 512Mb SDRAM, this needs to be 1024
     
     //Issue NOP
@@ -77,7 +77,7 @@ static void force_dq_ah_release(
 }
 
 void sdram_init(
-        out buffered port:32 dq_ah,
+        buffered port:32 dq_ah,
         out buffered port:32 cas,
         out buffered port:32 ras,
         out buffered port:8 we,
@@ -93,9 +93,7 @@ void sdram_init(
   partout(cas, 1, CTRL_CAS_NOP);
   partout(ras, 1, CTRL_RAS_NOP);
   partout(we, 1, CTRL_WE_NOP);
-  dq_ah <: 0;
 
-  sync(dq_ah);
   stop_clock(cb);
 
   T :> time;
@@ -435,7 +433,7 @@ static int handle_command(e_command cmd_type, sdram_cmd &cmd,
 #pragma unsafe arrays
 void sdram_server(streaming chanend c_client[client_count],
         const static unsigned client_count,
-        out buffered port:32 dq_ah,
+        buffered port:32 dq_ah,
         out buffered port:32 cas,
         out buffered port:32 ras,
         out buffered port:8 we,

@@ -18,7 +18,7 @@
 
 #define CAS_LATENCY   2
 #define REFRESH_MS    64
-#define CLOCK_DIV     4 //Note clock div 4 gives (500 / (4*2)) = 62.5MHz, div 3 gives (500 / (3*2)) = 83.3MHz
+#define CLOCK_DIV     5 //Note clock div 4 gives (500 / (4*2)) = 62.5MHz, div 5 gives (500 / (5*2)) = 50.0MHz
 #define DATA_BITS     16
 
 #if SDRAM_256Mb
@@ -80,7 +80,7 @@ static void whole_memory_write_read(streaming chanend c_server, s_sdram_state &s
 
     if (VERBOSE_MSG) printf("Begin   : whole_memory_write_read\n");
 
-    const unsigned clear_word = 0xdeafbeef;
+    const unsigned clear_word = 0xdeadbeef;
     //clear memory to know value
     for(unsigned i=0;i<TEST_WORDS;i++)
         buffer_pointer[i] = clear_word;
@@ -161,7 +161,7 @@ static void refresh_test_1(streaming chanend c_server, s_sdram_state &sdram_stat
         for(unsigned i=0;i<TEST_WORDS;i++){
             if(buffer_pointer[i] != 0xffffffff){
                 error = 1;
-                if (VERBOSE_MSG) printf("error %08x %08x addr:%d i:%d\n", buffer_pointer[i] , 0xffffffff, addr, i);
+                if (VERBOSE_MSG) printf("error: got %08x expecting %08x addr: %x idx:%d\n", buffer_pointer[i] , 0xffffffff, addr, i);
             }
         }
     }
@@ -207,7 +207,7 @@ static void refresh_test_2(streaming chanend c_server, s_sdram_state &sdram_stat
         for(unsigned i=0;i<TEST_WORDS;i++){
             if(buffer_pointer[i] != 0){
                 error = 1;
-                if (VERBOSE_MSG) printf("error %08x %08x addr:%d i:%d\n", buffer_pointer[i] , 0, addr, i);
+                if (VERBOSE_MSG) printf("error: got %08x expecting %08x addr: %x idx:%d\n", buffer_pointer[i] , 0, addr, i);
             }
         }
     }
@@ -277,7 +277,7 @@ static void refresh_test_3(streaming chanend c_server, s_sdram_state &sdram_stat
               unsigned s = super_pattern();
               if(buffer_pointer0[i] != s){
                   error = 1;
-                  if (VERBOSE_MSG) printf("error %08x %08x addr:%x i:%d\n", buffer_pointer0[i] , s, addr, i);
+                  if (VERBOSE_MSG) printf("error: got %08x expecting %08x addr: %x idx:%d\n", buffer_pointer0[i] , s, addr, i);
               }
           }
       }
@@ -402,17 +402,27 @@ void sdram_client(streaming chanend c_server) {
 
 #ifdef __XS2A__
 //XO-SKC-X200-1V0 Triangle slot tile 0
+
 #define      SERVER_TILE            0
-on tile[SERVER_TILE] : out buffered port:32   sdram_dq_ah                 = XS1_PORT_16B;
+on tile[SERVER_TILE] : buffered port:32       sdram_dq_ah                 = XS1_PORT_16B;
 on tile[SERVER_TILE] : out buffered port:32   sdram_cas                   = XS1_PORT_1J;
 on tile[SERVER_TILE] : out buffered port:32   sdram_ras                   = XS1_PORT_1I;
 on tile[SERVER_TILE] : out buffered port:8    sdram_we                    = XS1_PORT_1K;
 on tile[SERVER_TILE] : out port               sdram_clk                   = XS1_PORT_1L;
 on tile[SERVER_TILE] : clock                  sdram_cb                    = XS1_CLKBLK_2;
+/*
+#define      SERVER_TILE            0
+on tile[SERVER_TILE] : buffered port:32       sdram_dq_ah                 = XS1_PORT_16A;
+on tile[SERVER_TILE] : out buffered port:32   sdram_cas                   = XS1_PORT_1B;
+on tile[SERVER_TILE] : out buffered port:32   sdram_ras                   = XS1_PORT_1G;
+on tile[SERVER_TILE] : out buffered port:8    sdram_we                    = XS1_PORT_1C;
+on tile[SERVER_TILE] : out port               sdram_clk                   = XS1_PORT_1F;
+on tile[SERVER_TILE] : clock                  sdram_cb                    = XS1_CLKBLK_2;
+*/
 #else
 //Square slot on A16 slicekit
 #define      SERVER_TILE            1
-on tile[SERVER_TILE] : out buffered port:32   sdram_dq_ah                 = XS1_PORT_16A;
+on tile[SERVER_TILE] : buffered port:32       sdram_dq_ah                 = XS1_PORT_16A;
 on tile[SERVER_TILE] : out buffered port:32   sdram_cas                   = XS1_PORT_1B;
 on tile[SERVER_TILE] : out buffered port:32   sdram_ras                   = XS1_PORT_1G;
 on tile[SERVER_TILE] : out buffered port:8    sdram_we                    = XS1_PORT_1C;
