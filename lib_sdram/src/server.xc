@@ -9,6 +9,8 @@
 
 #define MINIMUM_REFRESH_COUNT 8
 
+//Sends an auto refresh command followed by 3 NOPs, 8 times
+//Cycle time fastest = 4 * 16ns = 64ns (tRFC=63ns)
 static void refresh(unsigned ncycles,
         out buffered port:32 cas,
         out buffered port:32 ras){
@@ -22,6 +24,56 @@ static void refresh(unsigned ncycles,
       cas <: REFRESH_MASK;
       ras <: REFRESH_MASK;
     }
+}
+
+//Optional function to issue a write to force the SDRAM to let go of dq_ah
+//We can use this prior to mode register set to ensure that the command is 
+//received without contention on the multiplixed bus
+static void force_dq_ah_release(
+        out buffered port:32 dq_ah,
+        out buffered port:32 cas,
+        out buffered port:32 ras,
+        out buffered port:8 we) {
+  timer T;
+  unsigned tmp, t;
+  //Turn dq_ah around so that it is an input to avoid contention
+  asm volatile("in %0, res[%1]" : "=r"(tmp)  : "r"(dq_ah));
+
+  //Wait a microsecond to allow bus to settle
+  T :> t;
+  T when timerafter(t + 1 * TIMER_TICKS_PER_US) :> t;
+
+  //Get time to synchroise subsequent multiple port operartions
+  asm volatile(" getts %0, res[%1]" : "=r" (t) : "r" (dq_ah));
+
+  t+=20; // 10 * 16 = 320ns
+
+  //Outputting write will force the SDRAM to let go of the bus
+  //"The DQs remain with high-impedance at the end of the burst unless another command is initiated."
+  partout_timed(cas, 3, CTRL_CAS_ACTIVE | (CTRL_CAS_WRITE<<1) | (CTRL_CAS_NOP<<2), t);
+  partout_timed(ras, 3, CTRL_RAS_ACTIVE | (CTRL_RAS_WRITE<<1) | (CTRL_RAS_NOP<<2), t);
+  partout_timed(we , 3, CTRL_WE_ACTIVE  | (CTRL_WE_WRITE<<1)  | (CTRL_WE_NOP<<2), t);
+  //Grab value again - we are interested in A10 at the time we issue the write
+  asm volatile("setpt res[%0], %1"::"r"(dq_ah), "r"(t+1));
+  asm volatile("in %0, res[%1]" : "=r"(tmp)  : "r"(dq_ah));  
+
+  t+=20; // 10 * 16 = 320ns
+
+  //Have we outputted a write or a writepre?
+  if (tmp & 0x400) { //It was a writepre. Sit it out. May be up to 512 clocks
+    t+=512; //Whole row + some recovery time
+            //TODO, if we want top support 512Mb SDRAM, this needs to be 1024
+    
+    //Issue NOP
+    partout_timed(ras, 1, CTRL_RAS_NOP, t);
+    partout_timed(cas, 1, CTRL_CAS_NOP, t);
+    partout_timed(we, 1, CTRL_WE_NOP,  t);
+  }
+  else {//Normal write. Issue precharge to terminate
+    partout_timed(cas, 2, CTRL_CAS_PRECHARGE | (CTRL_CAS_NOP<<1), t);
+    partout_timed(ras, 2, CTRL_RAS_PRECHARGE | (CTRL_RAS_NOP<<1), t);
+    partout_timed(we, 2,  CTRL_WE_PRECHARGE  | (CTRL_WE_NOP<<1),  t);
+  }
 }
 
 void sdram_init(
@@ -49,12 +101,15 @@ void sdram_init(
   T :> time;
   T when timerafter(time + 100 * TIMER_TICKS_PER_US) :> time;
 
+  //Connect 500MHz xcore clock
   asm("setclk res[%0], %1"::"r"(cb), "r"(XS1_CLK_XCORE));
   set_clock_div(cb, clock_divider);
 
+  //Make the clock out drive directly from clock block
   set_port_clock(clk, cb);
   set_port_mode_clock(clk);
 
+  //Connect all SDRAM ports to th SDRAM clock
   set_port_clock(dq_ah, cb);
   set_port_clock(cas, cb);
   set_port_clock(ras, cb);
@@ -86,6 +141,7 @@ void sdram_init(
         set_port_no_sample_delay(dq_ah);
         break;
     case 10: // 500 / (10 * 2) = 25.00MHz. ~12.2ns margin
+    case 25:
         set_pad_delay(dq_ah, 0);
         set_port_no_sample_delay(dq_ah);
         break;
@@ -97,16 +153,16 @@ void sdram_init(
   }
 
 
-
   start_clock(cb);
 
   //Wait 200us for clock to stabilise
   T :> time;
   T when timerafter(time + 200 * TIMER_TICKS_PER_US) :> time;
 
-  //Grab port time
-  dq_ah <: 0 @ t;
-  sync(dq_ah);
+  force_dq_ah_release(dq_ah, cas, ras, we);
+
+  //Grab port time for subsequent timed operations
+  asm volatile(" getts %0, res[%1]" : "=r" (t) : "r" (dq_ah));
 
   //200 SDRAM clocks later (16 * 2000 = 3200ns), issue NOP again
   t+=200;
@@ -122,6 +178,7 @@ void sdram_init(
   dq_ah <: 0x04000400 @ t; //Set A10 high
   sync(dq_ah);
   t+=600; // 600 * 16 = 9.6us
+  partout_timed(cas, 2, CTRL_CAS_PRECHARGE | (CTRL_CAS_NOP<<1), t);
   partout_timed(ras, 2, CTRL_RAS_PRECHARGE | (CTRL_RAS_NOP<<1), t);
   partout_timed(we, 2,  CTRL_WE_PRECHARGE  | (CTRL_WE_NOP<<1),  t);
   
@@ -166,9 +223,8 @@ void sdram_init(
   T :> time;
   T when timerafter(time + 1 * TIMER_TICKS_PER_US) :> time;
 
-  //Perform refresh of whole memory
-  refresh(256, cas, ras);
-
+  //Perform 8 auto refreshes
+  refresh(MINIMUM_REFRESH_COUNT, cas, ras);
 }
 
 typedef struct {
@@ -213,7 +269,6 @@ static inline void write_impl(unsigned row, unsigned col, unsigned bank,
     //printf("Write buffer pointer=%p\trow_words=%x\tword_count=%x\n",buffer, row_words, word_count);
 
     dq_ah @ t <: rowcol;
-    
     partout_timed(cas, 3, CTRL_CAS_ACTIVE | (CTRL_CAS_WRITE<<1) | (CTRL_CAS_NOP<<2), t);
     partout_timed(ras, 3, CTRL_RAS_ACTIVE | (CTRL_RAS_WRITE<<1) | (CTRL_RAS_NOP<<2), t);
     partout_timed(we , 3, CTRL_WE_ACTIVE  | (CTRL_WE_WRITE<<1)  | (CTRL_WE_NOP<<2), t);
