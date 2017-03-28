@@ -10,7 +10,7 @@
 
 #define USE_256Mb   1 //Else will assume 64Mb
 
-#define DEBUG       1
+#define DEBUG       0 //Print details of read/write fail
 
 unsigned c = 0xffffffff;
 static void reset_super_pattern(unsigned x) {
@@ -31,9 +31,7 @@ unsigned application(streaming chanend c_server) {
   unsigned * movable write_buffer_pointer = write_buffer;
 
   s_sdram_state sdram_state;
-  printf("pre...\n");
   sdram_init_state(c_server, sdram_state);
-  printf("post...\n");
 
   //Fill the memory initially with known pattern and verify
   for(unsigned i=0;i<BUF_WORDS;i++){
@@ -41,14 +39,10 @@ unsigned application(streaming chanend c_server) {
     read_buffer_pointer[i] = 0; //And clear read pointer
   }
   sdram_write(c_server, sdram_state, 0x0, BUF_WORDS, move(write_buffer_pointer));
-  printf("wr_start\n");
   sdram_complete(c_server, sdram_state, write_buffer_pointer);
-  printf("wr_complete\n");
 
   sdram_read (c_server, sdram_state, 0x0, BUF_WORDS, move( read_buffer_pointer));
-  printf("rd_start\n");
   sdram_complete(c_server, sdram_state,  read_buffer_pointer);
-  printf("rd_complete\n");
 
   for(unsigned i=0;i<BUF_WORDS;i++) {
     //printf("%08x %d\n", read_buffer_pointer[i], i);
@@ -86,6 +80,11 @@ unsigned application(streaming chanend c_server) {
 }
 
 
+void burn(chanend c_exit){
+  set_core_fast_mode_on();
+  c_exit :> int _;
+}
+
 //Use port mapping according to slicekit used
 #ifdef __XS2A__
 //Triangle slot tile 0 for XU216
@@ -109,6 +108,7 @@ on tile[SERVER_TILE] : clock                  sdram_cb                    = XS1_
 
 int main() {
   streaming chan c_sdram[1];
+  chan c_exit[6];
   par {
     on tile[SERVER_TILE]:
     {
@@ -117,6 +117,9 @@ int main() {
           for(unsigned sample_delay_edge = 0; sample_delay_edge <= 1; sample_delay_edge++){
             for(unsigned pad_delay_n = 0; pad_delay_n <= 5; pad_delay_n++) {
               unsigned result = 2;
+              unsigned n_burn;
+              if (clock_divider == 3) n_burn = 4;
+              else n_burn = 6;
               printf("DIV:%d\tN:%d\tSDEL:%d\tPDEL:%d", clock_divider, whole_cycles_read_delay, sample_delay_edge, pad_delay_n);
               par{
                 sdram_server(c_sdram, 1,
@@ -134,13 +137,14 @@ int main() {
                 {
                   result = application(c_sdram[0]);
                   sdram_shutdown(c_sdram[0]);
+                  for(int i=0; i<n_burn; i++) c_exit[i] <: 0;
                 }
                 {
-                  if (clock_divider == 3) par(int i=0 ;i<4 ;i++) while(1); //Consume the remaining MHz
-                  else par(int i=0 ;i<6 ;i++) while(1); //Consume the remaining MHz
+                  if (clock_divider == 3) par(int i=0; i<4; i++) burn(c_exit[i]); //Consume the remaining MHz
+                  else par(int i=0; i<6; i++) burn(c_exit[i]); //Consume the remaining MHz
                 }
               }
-              printf(" - %d", result ? "FAIL\n" : "PASS\n");
+              printf(" - %s", result ? "FAIL\n" : "PASS\n");
             } 
           }
         }
