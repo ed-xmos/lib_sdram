@@ -32,8 +32,12 @@ static unsigned sdram_init(
         out port clk,
         clock cb,
         unsigned cas_latency,
-        const static unsigned clock_divider
-) {
+        unsigned clock_divider,
+        unsigned pad_delay_n,
+        unsigned whole_cycles_read_delay,
+        unsigned sample_delay_edge
+        )
+ {
   //This parameter is used to delay the read by a whole number of sdram clocks
   //It is used to compensate for the large round trip delay time of the xcore IO
 
@@ -70,59 +74,10 @@ static unsigned sdram_init(
   set_port_clock(ras, cb);
   set_port_clock(we, cb);
 
-  //Setup pad and internal read delays to compensate for round trip delays
-  //SDRAM used for timing calcs has 6ns max access (clock to data) time and 2.5ns min hold time 
-  //Timings assume use of any combination of ports. Greater timing margins can be obtained 
-  //by choosing specific ports. Please consult the "IO timings for xCORE200" document for details
-  switch(clock_divider) {
-    case 4: // 500 / (4 * 2) = 62.50MHz. ~700ps margin
-        read_delay_whole_clocks = 2;
-        set_port_no_sample_delay(dq_ah);
-        set_pad_delay(dq_ah, 2);
-        break;
-    case 5: // 500 / (5 * 2) = 50.00MHz. ~2.7ns margin
-        read_delay_whole_clocks = 1;
-        set_port_sample_delay(dq_ah);
-        set_pad_delay(dq_ah, 0);
-        break;
-    case 6: // 500 / (6 * 2) = 41.67MHz. ~4.7ns margin
-        read_delay_whole_clocks = 1;
-        set_port_sample_delay(dq_ah);
-        set_pad_delay(dq_ah, 2);
-        break;
-    case 7: // 500 / (7 * 2) = 35.71MHz. ~6.7ns margin
-        read_delay_whole_clocks = 1;
-        set_port_sample_delay(dq_ah);
-        set_pad_delay(dq_ah, 4);
-        break;
-    case 8: // 500 / (8 * 2) = 31.25MHz. ~7.5ns margin 
-        read_delay_whole_clocks = 1;
-        set_port_sample_delay(dq_ah);
-        set_pad_delay(dq_ah, 5);
-        break;
-    case 9: // 500 / (9 * 2) = 27.78MHz. ~8.7ns margin
-        read_delay_whole_clocks = 1;
-        set_port_no_sample_delay(dq_ah);
-        set_pad_delay(dq_ah, 0);
-        break;
-    case 10: // 500 / (10 * 2) = 25.00MHz. ~12.7ns margin
-        read_delay_whole_clocks = 1;
-        set_port_no_sample_delay(dq_ah);
-        set_pad_delay(dq_ah, 0);
-        break;
-    // 83.33MHz may be possible with compromised setup/hold times and specific port usage.
-    //case 3: // 500 / (3 * 2) = 83.33MHz.
-    //    read_delay_whole_clocks = 2;
-    //    set_port_sample_delay(dq_ah);
-    //    set_pad_delay(dq_ah, 2);
-    //    break;
-    default: // Support for any frequency lower that 25MHz can be implemented by using 
-             // the 25MHz delay settings which will provide 12.7ns margin (plenty)
-        __builtin_trap();
-        break;
-  }
-
-
+  read_delay_whole_clocks = whole_cycles_read_delay;
+  if (sample_delay_edge) set_port_sample_delay(dq_ah);
+  else set_port_no_sample_delay(dq_ah);
+  set_pad_delay(dq_ah, pad_delay_n);
 
   start_clock(cb);
 
@@ -422,7 +377,11 @@ void sdram_server(streaming chanend c_client[client_count],
         const static unsigned bank_address_bits,
         const static unsigned refresh_ms,
         const static unsigned refresh_cycles,
-        const static unsigned clock_divider){
+        unsigned clock_divider,
+        unsigned pad_delay_n,
+        unsigned whole_cycles_read_delay,
+        unsigned sample_delay_edge
+        ){
     timer t;
     unsigned time;
     sdram_cmd cmd_buffer[7][SDRAM_MAX_CMD_BUFFER];
@@ -435,7 +394,8 @@ void sdram_server(streaming chanend c_client[client_count],
         cmd_buffer[i]->buffer = null;
     }
 
-    cas_latency = sdram_init(dq_ah, cas, ras, we, clk, cb, cas_latency, clock_divider);
+    cas_latency = sdram_init(dq_ah, cas, ras, we, clk, cb, cas_latency, 
+      clock_divider, pad_delay_n, whole_cycles_read_delay, sample_delay_edge);
 
     unsafe {
         for(unsigned i=0;i<client_count;i++){
@@ -444,7 +404,7 @@ void sdram_server(streaming chanend c_client[client_count],
         }
     }
 
-    refresh(refresh_cycles, cas, ras);
+    //refresh(refresh_cycles, cas, ras);
     t:> time;
 
     unsigned clocks_per_refresh_burst = (XCORE_CLOCKS_PER_MS*refresh_ms*MINIMUM_REFRESH_COUNT) / refresh_cycles;

@@ -48,7 +48,10 @@ void sdram_server(streaming chanend c_client[client_count],
         const static unsigned bank_address_bits,
         const static unsigned refresh_ms,
         const static unsigned refresh_cycles,
-        const static unsigned clock_divider);
+        unsigned clock_divider,
+        unsigned pad_delay_n,
+        unsigned whole_cycles_read_delay,
+        unsigned sample_delay_edge);
 
 /**
  * This is used to initialise the sdram_state that follows the channel to the SDRAM server. It must only be called
