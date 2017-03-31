@@ -63,8 +63,15 @@ static unsigned sdram_init(
   T :> time;
   T when timerafter(time + 100 * TIMER_TICKS_PER_US) :> time;
 
-  asm("setclk res[%0], %1"::"r"(cb), "r"(XS1_CLK_XCORE));
-  set_clock_div(cb, clock_divider);
+  //2 is special case - use ref clk @ 100MHz
+  if (clock_divider == 2) {
+    configure_clock_ref(cb, 0);
+  }
+  else
+  {
+    asm("setclk res[%0], %1"::"r"(cb), "r"(XS1_CLK_XCORE));
+    set_clock_div(cb, clock_divider);
+  }
 
   set_port_clock(clk, cb);
   set_port_mode_clock(clk);
@@ -168,8 +175,11 @@ void sdram_block_write(unsigned * buffer, sdram_ports &ports, unsigned t0, unsig
 //They are calulated assuming the SDRAM and server tasks are both running at 62.5MHz. They can be scaled down proportionally 
 //if using lower SDRAM clock rates, but the server task still runs at 62.5MHz
 #ifdef __XS2A__
-#define WRITE_SETUP_LATENCY (42)  //Simulated time with thread @ 62.5MHz is 36 thread cycles
-#define READ_SETUP_LATENCY  (50)  //Simulated time with thread @ 62.5MHz is 43 thread cycles
+#define WRITE_SETUP_LATENCY (84)  //Doubled to support testing at 100MHz
+#define READ_SETUP_LATENCY  (100)  //as above
+//#define WRITE_SETUP_LATENCY (42)  //Simulated time with thread @ 62.5MHz is 36 thread cycles
+//#define READ_SETUP_LATENCY  (50)  //Simulated time with thread @ 62.5MHz is 43 thread cycles
+
 #else
 #define WRITE_SETUP_LATENCY (80)  //Simulated time with thread @ 62.5MHz is 55 thread cycles
 #define READ_SETUP_LATENCY  (70)  //Simulated time with thread @ 62.5MHz is 54 thread cycles

@@ -112,13 +112,14 @@ int main() {
   par {
     on tile[SERVER_TILE]:
     {
-      for(unsigned clock_divider = 3; clock_divider <= 10; clock_divider++){
+      for(unsigned clock_divider = 2; clock_divider <= 10; clock_divider++){
         for(unsigned whole_cycles_read_delay = 0; whole_cycles_read_delay <= 2; whole_cycles_read_delay++){
           for(unsigned sample_delay_edge = 0; sample_delay_edge <= 1; sample_delay_edge++){
             for(unsigned pad_delay_n = 0; pad_delay_n <= 5; pad_delay_n++) {
               unsigned result = 2;
               unsigned n_burn;
-              if (clock_divider == 3) n_burn = 4;
+              if (clock_divider == 2) n_burn = 3;
+              else if (clock_divider == 3) n_burn = 4;
               else n_burn = 6;
               printf("DIV:%d\tN:%d\tSDEL:%d\tPDEL:%d", clock_divider, whole_cycles_read_delay, sample_delay_edge, pad_delay_n);
               par{
@@ -140,7 +141,8 @@ int main() {
                   for(int i=0; i<n_burn; i++) c_exit[i] <: 0;
                 }
                 {
-                  if (clock_divider == 3) par(int i=0; i<4; i++) burn(c_exit[i]); //Consume the remaining MHz
+                  if  (clock_divider == 2) par(int i=0; i<3; i++) burn(c_exit[i]); //Consume the remaining MHz
+                  else if (clock_divider == 3) par(int i=0; i<4; i++) burn(c_exit[i]); //Consume the remaining MHz
                   else par(int i=0; i<6; i++) burn(c_exit[i]); //Consume the remaining MHz
                 }
               }
