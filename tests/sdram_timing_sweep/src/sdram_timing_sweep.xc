@@ -87,7 +87,7 @@ void burn(chanend c_exit){
 
 //Use port mapping according to slicekit used
 #ifdef __XS2A__
-//Triangle slot tile 0 for XU216
+#if 1 //Triangle slot for XU216
 #define      SERVER_TILE            0
 on tile[SERVER_TILE] : out buffered port:32   sdram_dq_ah                 = XS1_PORT_16B;
 on tile[SERVER_TILE] : out buffered port:32   sdram_cas                   = XS1_PORT_1J;
@@ -95,6 +95,17 @@ on tile[SERVER_TILE] : out buffered port:32   sdram_ras                   = XS1_
 on tile[SERVER_TILE] : out buffered port:8    sdram_we                    = XS1_PORT_1K;
 on tile[SERVER_TILE] : out port               sdram_clk                   = XS1_PORT_1L;
 on tile[SERVER_TILE] : clock                  sdram_cb                    = XS1_CLKBLK_2;
+#else //Star slot 
+#define      SERVER_TILE            1
+on tile[SERVER_TILE] : out buffered port:32   sdram_dq_ah                 = XS1_PORT_16A;
+on tile[SERVER_TILE] : out buffered port:32   sdram_cas                   = XS1_PORT_1B;
+on tile[SERVER_TILE] : out buffered port:32   sdram_ras                   = XS1_PORT_1G;
+on tile[SERVER_TILE] : out buffered port:8    sdram_we                    = XS1_PORT_1C;
+on tile[SERVER_TILE] : out port               sdram_clk                   = XS1_PORT_1F;
+on tile[SERVER_TILE] : clock                  sdram_cb                    = XS1_CLKBLK_2;
+#endif
+
+
 #else
 //Square slot on A16 slicekit
 #define      SERVER_TILE            1
@@ -112,16 +123,16 @@ int main() {
   par {
     on tile[SERVER_TILE]:
     {
-      for(unsigned clock_divider = 2; clock_divider <= 10; clock_divider++){
-        for(unsigned whole_cycles_read_delay = 0; whole_cycles_read_delay <= 2; whole_cycles_read_delay++){
+      for(unsigned clock_divider = 3; clock_divider <= 10; clock_divider++){
+        for(unsigned whole_cycles_read_delay = 0; whole_cycles_read_delay <= 3; whole_cycles_read_delay++){
           for(unsigned sample_delay_edge = 0; sample_delay_edge <= 1; sample_delay_edge++){
             for(unsigned pad_delay_n = 0; pad_delay_n <= 5; pad_delay_n++) {
-              unsigned result = 2;
+              unsigned result = 2222; //Invalid number
               unsigned n_burn;
               if (clock_divider == 2) n_burn = 3;
               else if (clock_divider == 3) n_burn = 4;
               else n_burn = 6;
-              printf("DIV:%d\tN:%d\tSDEL:%d\tPDEL:%d", clock_divider, whole_cycles_read_delay, sample_delay_edge, pad_delay_n);
+              printf("DIV:%d\tWHOLE_CYC_DELAY:%d\tSAMP_DELAY:%d\tPAD_DELAY:%d", clock_divider, whole_cycles_read_delay, sample_delay_edge, pad_delay_n);
               par{
                 sdram_server(c_sdram, 1,
                   sdram_dq_ah,
